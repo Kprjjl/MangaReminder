@@ -90,12 +90,8 @@ class Manga:
         }
 
 
-def is_manga_obj(manga):
-    if not isinstance(manga, Manga):
-        raise TypeError("Must pass a Manga object.")
-
-
-def new_manga(manga):  # Create
+# Create
+def new_manga(manga):
     is_manga_obj(manga)
 
     connect = sqlite3.connect(Manga.db_file)
@@ -110,11 +106,13 @@ def new_manga(manga):  # Create
     connect.close()
 
 
-def get_manga(name):  # Read (Required for renaming manga)
+# Read
+def get_manga(name):
     pass
 
 
-def update_manga(manga):  # Update
+# Update
+def update_manga(manga):
     try:
         details = manga.details()
     except AttributeError:
@@ -133,15 +131,46 @@ def update_manga(manga):  # Update
     connect.close()
 
 
-def del_manga(manga):  # Delete
-    is_manga_obj(manga)
+def rename_manga(name, new_name):
+    if not if_manga_exists(name):
+        return f"No manga with name {name} in storage."
 
     connect = sqlite3.connect(Manga.db_file)
     cursor = connect.cursor()
-    cursor.execute("DELETE FROM Manga WHERE name = ?", (manga.name,))
+    cursor.execute("UPDATE Manga SET name = ? WHERE name = ?", (new_name, name))
     connect.commit()
     connect.close()
+    return f"{name} renamed to {new_name}."
 
+
+# Delete
+def del_manga(name):
+    if not if_manga_exists(name):
+        return f"No manga with name {name} in storage."
+
+    connect = sqlite3.connect(Manga.db_file)
+    cursor = connect.cursor()
+    cursor.execute("DELETE FROM Manga WHERE name = ?", (name,))
+    connect.commit()
+    connect.close()
+    return f"{name} deleted from storage."
+
+
+# Misc
+def is_manga_obj(manga):
+    if not isinstance(manga, Manga):
+        raise TypeError("Must pass a Manga object.")
+
+
+def if_manga_exists(name):
+    connect = sqlite3.connect(Manga.db_file)
+    cursor = connect.cursor()
+
+    cursor.execute("SELECT * FROM Manga WHERE name = ?", (name,))
+    manga = cursor.fetchall()
+    connect.close()
+
+    return False if len(manga) == 0 else True
 
 # -------OLD IDEAS---------
 # db_file = "/database/mangadb.db"
