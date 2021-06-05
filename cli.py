@@ -64,6 +64,7 @@ def main():
     parser.add_argument("--update", help="update existing manga", action="store_const", const="update")
     parser.add_argument("--delete", help="delete existing manga", nargs='+', metavar="manga name")
     parser.add_argument("--rename", help="rename existing manga", nargs='+', metavar="name / new_name")
+    parser.add_argument("--get", help="view existing manga details", nargs='+', metavar="manga name")
     args = parser.parse_args()
 
     if args.new == "new":
@@ -90,6 +91,19 @@ def main():
             new_name += ' ' + word
 
         crud.rename_manga(name.lstrip(), new_name.lstrip())
+    elif args.get is not None:
+        print("get")
+        name = ''
+        for word in args.get:
+            name += ' ' + word
+
+        row = crud.get_manga(name.lstrip())
+        print(f"name: {row['name']}\n"
+              f"link: {row['link']}\n"
+              f"current_ch: {row['current_ch']}, recent_ch: {row['recent_ch']}\n"
+              f"interval: {row['interval']}\n"
+              f"up_date: {row['up_date']}\n"
+              f"ongoing: {row['ongoing']}")
 
 
 if __name__ == "__main__":

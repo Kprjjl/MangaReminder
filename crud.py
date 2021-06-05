@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import date
+import datetime
 
 
 class Manga:
@@ -96,7 +96,7 @@ class Manga:
                 continue
             elif key == 'interval' and datatype is int:
                 continue
-            elif key == 'up_date' and datatype is date:
+            elif key == 'up_date' and datatype is datetime.date:
                 continue
             elif key == 'ongoing' and datatype in [int, bool]:
                 continue
@@ -130,8 +130,8 @@ def new_manga(manga):
     connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = connect.cursor()
 
-    query = "INSERT INTO Manga (name, link, current_ch, recent_ch, interval, up_date, ongoing) VALUES (?, ?, ?, ?, ?, " \
-            "?, ?) "
+    query = "INSERT INTO Manga (name, link, current_ch, recent_ch, interval, up_date, ongoing) VALUES (?, ?, ?, ?, ?," \
+            " ?, ?) "
     params = (manga.name, manga.link, manga.recent_ch, manga.current_ch, manga.interval, manga.up_date, manga.ongoing)
     cursor.execute(query, params)
 
@@ -141,6 +141,19 @@ def new_manga(manga):
 
 # Read
 def get_manga(name):
+    if not if_manga_exists(name):
+        return f"Manga with name {name} not found."
+
+    connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
+    connect.row_factory = sqlite3.Row
+    cursor = connect.cursor()
+    cursor.execute("SELECT * FROM Manga WHERE name = ?", (name,))
+    row = cursor.fetchone()
+
+    return dict(row)
+
+
+def list_manga():  # must use WHERE to group rows (might use **kwargs)
     pass
 
 
