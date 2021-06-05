@@ -1,23 +1,25 @@
 import sqlite3
 from datetime import datetime
 
-db_file = "/database/mangadb.db"
-fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'upDate'}
-fieldtypes = {
-    'name': 'str or None',
-    'link': 'str or None',
-    'current_ch': 'float, int or None',
-    'recent_ch': 'float, int or None',
-    'interval': 'int or None',
-    'upDate': 'str or None'
-}
 # might need: function that checks proper date format (YYYY-MM-DD?)
 # need: checker if name already exists
 
 
+# new ideas
 class Manga:
+    db_file = "/database/mangadb.db"
+    fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'upDate'}
+    fieldtypes = {
+        'name': 'str or None',
+        'link': 'str or None',
+        'current_ch': 'float, int or None',
+        'recent_ch': 'float, int or None',
+        'interval': 'int or None',
+        'upDate': 'str or None'
+    }
+
     def __init__(self, name=None, link=None, current_ch=None, recent_ch=None, interval=None,
-                 up_date=None):
+                 up_date=None, details=None):
         self.name = name
         self.link = link
         self.current_ch = current_ch
@@ -25,95 +27,220 @@ class Manga:
         self.interval = interval
         self.up_date = up_date
 
+        if details is not None:
+            self.update_details(details)
 
-def check_details(details):
-    # check if details is None or is a dictionary
-    try:
+    def update_details(self, details):
+        # check
+        self.check_details(details)
+        # required 'name' key
+        if self.name is None:
+            return "No 'name' attribute."
+
         keys = details.keys()
-    except AttributeError:
-        return "Passed parameter is not a dict"  # TypeError
+        for key in keys:
+            if key == 'name':
+                self.name = details['name']
+            elif key == 'link':
+                self.link = details['link']
+            elif key == 'current_ch':
+                self.current_ch = details['current_ch']
+            elif key == 'recent_ch':
+                self.recent_ch = details['recent_ch']
+            elif key == 'interval':
+                self.interval = details['interval']
+            elif key == 'upDate':
+                self.up_date = details['upDate']
 
-    if {*keys} <= fields:
-        return "Keys are not fieldnames."  # KeyError
+    @staticmethod
+    def check_details(details):
+        # check if details is None or is a dictionary
+        try:
+            keys = details.keys()
+        except AttributeError:
+            raise TypeError("Passed parameter is not a dict")  # TypeError
 
-    # Type Check
-    for key in keys:
-        if details[key] is None:
-            continue
+        if {*keys} <= Manga.fields:
+            raise KeyError("Keys are not fieldnames.")  # KeyError
 
-        datatype = type(details[key])
-        if key in ['name', 'link', 'upDate'] and datatype is str:
-            continue
-        elif key in ['current_ch', 'recent_ch'] and datatype in [float, int]:
-            continue
-        elif key == 'interval' and datatype is int:
-            continue
-        return f"{key} must be of type {fieldtypes[key]}."  # TypeError
+        # Type Check
+        for key in keys:
+            if details[key] is None:
+                continue
 
-    # Date Format Check
+            datatype = type(details[key])
+            if key in ['name', 'link', 'upDate'] and datatype is str:
+                continue
+            elif key in ['current_ch', 'recent_ch'] and datatype in [float, int]:
+                continue
+            elif key == 'interval' and datatype is int:
+                continue
+            raise TypeError(f"{key} must be of type {Manga.fieldtypes[key]}.")  # TypeError
 
-    return True
+        # Date Format Check Here
+
+    def details(self):
+        return {
+            'name': self.name,
+            'link': self.link,
+            'current_ch': self.current_ch,
+            'recent_ch': self.recent_ch,
+            'interval': self.interval,
+            'upDate': self.up_date
+        }
 
 
-def new_manga(name, details=None):
-    connect = sqlite3.connect(db_file)
+def is_manga_obj(manga):
+    if not isinstance(manga, Manga):
+        raise TypeError("Must pass a Manga object.")
+
+
+def new_manga(manga):  # Create
+    is_manga_obj(manga)
+
+    connect = sqlite3.connect(Manga.db_file)
     cursor = connect.cursor()
 
-    cursor.execute("INSERT INTO Manga (name) VALUES (?)", (name,))
+    cursor.execute("""
+        INSERT INTO Manga (name, link, current_ch, recent_ch, interval, upDate) 
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (manga.name, manga.link, manga.recent_ch, manga.current_ch, manga.interval, manga.up_date))
 
     connect.commit()
     connect.close()
 
-    if details is not None:
-        update_details(details)
+
+def get_manga(name):  # Read (Required for renaming manga)
+    pass
 
 
-# ---------UPDATING----------
-def update_name(name, new_name):
-    connect = sqlite3.connect(db_file)
-    cursor = connect.cursor()
-    cursor.execute("UPDATE Manga SET name = ? WHERE name = ?", (new_name, name))
-    connect.commit()
-    connect.close()
-
-
-def update_details(details):
-    # check
-    check = check_details(details)
-    if not check:
-        return check
-    # required 'name' key
+def update_manga(manga):  # Update
     try:
-        name = details['name']
-    except KeyError:
-        return "No 'name' key passed in dict."
+        details = manga.details()
+    except AttributeError:
+        raise TypeError("Must pass a Manga object.")
+    if manga.name is None:
+        raise AttributeError("Manga object must have attribute 'name'.")
 
-    # check if all keys are fieldnames
-    keys = details.keys()
-    if {*keys} <= fields:
-        return "Wrong details passed."
+    upd_params = [(key, details[key], details['name']) for key in details.keys()]
 
-    upd_params = [(key, details[key], name) for key in keys]
-
-    connect = sqlite3.connect(db_file)
+    connect = sqlite3.connect(Manga.db_file)
     cursor = connect.cursor()
 
     cursor.executemany("UPDATE Manga SET ? = ? WHERE name = ?", upd_params)
 
     connect.commit()
     connect.close()
+
+
+def del_manga(manga):  # Delete
+    is_manga_obj(manga)
+
+    connect = sqlite3.connect(Manga.db_file)
+    cursor = connect.cursor()
+    cursor.execute("DELETE FROM Manga WHERE name = ?", (manga.name,))
+    connect.commit()
+    connect.close()
+
+
+# -------OLD IDEAS---------
+# db_file = "/database/mangadb.db"
+# fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'upDate'}
+# fieldtypes = {
+#     'name': 'str or None',
+#     'link': 'str or None',
+#     'current_ch': 'float, int or None',
+#     'recent_ch': 'float, int or None',
+#     'interval': 'int or None',
+#     'upDate': 'str or None'
+# }
+
+# def check_details(details):
+#     # check if details is None or is a dictionary
+#     try:
+#         keys = details.keys()
+#     except AttributeError:
+#         return "Passed parameter is not a dict"  # TypeError
+#
+#     if {*keys} <= fields:
+#         return "Keys are not fieldnames."  # KeyError
+#
+#     # Type Check
+#     for key in keys:
+#         if details[key] is None:
+#             continue
+#
+#         datatype = type(details[key])
+#         if key in ['name', 'link', 'upDate'] and datatype is str:
+#             continue
+#         elif key in ['current_ch', 'recent_ch'] and datatype in [float, int]:
+#             continue
+#         elif key == 'interval' and datatype is int:
+#             continue
+#         return f"{key} must be of type {fieldtypes[key]}."  # TypeError
+#
+#     # Date Format Check
+#
+#     return True
+
+
+# def new_manga(name, details=None):
+#     connect = sqlite3.connect(db_file)
+#     cursor = connect.cursor()
+#
+#     cursor.execute("INSERT INTO Manga (name) VALUES (?)", (name,))
+#
+#     connect.commit()
+#     connect.close()
+#
+#     if details is not None:
+#         update_details(details)
+
+
+# ---------UPDATING----------
+# def update_name(name, new_name):
+#     connect = sqlite3.connect(db_file)
+#     cursor = connect.cursor()
+#     cursor.execute("UPDATE Manga SET name = ? WHERE name = ?", (new_name, name))
+#     connect.commit()
+#     connect.close()
+
+
+# def update_details(details):
+#     # check
+#     check = check_details(details)
+#     if not check:
+#         return check
+#     # required 'name' key
+#     try:
+#         name = details['name']
+#     except KeyError:
+#         return "No 'name' key passed in dict."
+#
+#     # check if all keys are fieldnames
+#     keys = details.keys()
+#     if {*keys} <= fields:
+#         return "Wrong details passed."
+#
+#     upd_params = [(key, details[key], name) for key in keys]
+#
+#     connect = sqlite3.connect(db_file)
+#     cursor = connect.cursor()
+#
+#     cursor.executemany("UPDATE Manga SET ? = ? WHERE name = ?", upd_params)
+#
+#     connect.commit()
+#     connect.close()
 # -------------------------------
 
 
 # ---------DELETING-----------
-def del_manga(name):
-    connect = sqlite3.connect(db_file)
-    cursor = connect.cursor()
-    cursor.execute("DELETE FROM Manga WHERE name = ?", (name,))
-    connect.commit()
-    connect.close()
+# def del_manga(name):
+#     connect = sqlite3.connect(db_file)
+#     cursor = connect.cursor()
+#     cursor.execute("DELETE FROM Manga WHERE name = ?", (name,))
+#     connect.commit()
+#     connect.close()
 # ---------------------------
-
-
-def list_manga():
-    pass
+# def list_manga():
+#     pass
