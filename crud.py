@@ -7,21 +7,28 @@ from datetime import date
 
 # new ideas
 class Manga:
-    db_file = "/database/mangadb.db"
-    fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'upDate', 'ongoing'}
+    db_file = "database/mangadb.db"
+    fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'up_date', 'ongoing'}
     fieldtypes = {
         'name': 'str or None',
         'link': 'str or None',
         'current_ch': 'float, int or NoneType',
         'recent_ch': 'float, int or NoneType',
         'interval': 'int or NoneType',
-        'upDate': 'datetime.date or NoneType',
+        'up_date': 'datetime.date or NoneType',
         'ongoing': 'integer (1 or 0) or boolean'
     }
 
-    def __init__(self, name=None, link=None, current_ch=None, recent_ch=None, interval=None,
-                 up_date=None, ongoing=None, details=None):
-        self.name = None
+    def __init__(self, details=None, name=None, link=None, current_ch=None, recent_ch=None, interval=None,
+                 up_date=None, ongoing=None):
+        # required name key
+        if name is None:
+            try:
+                self.name = details['name']
+            except KeyError:
+                raise KeyError("No 'name' key.")
+        else:
+            self.name = name
         self.link = None
         self.current_ch = None
         self.recent_ch = None
@@ -36,7 +43,7 @@ class Manga:
                 'current_ch': current_ch,
                 'recent_ch': recent_ch,
                 'interval': interval,
-                'upDate': up_date,
+                'up_date': up_date,
                 'ongoing': ongoing
             }
         self.update_details(details)
@@ -44,15 +51,17 @@ class Manga:
     def update_details(self, details):
         # check
         self.check_details(details)
-        # required 'name' key
+        # required 'name' attribute
         if self.name is None:
-            return "No 'name' attribute."
+            raise AttributeError("No 'name' attribute.")
 
         keys = details.keys()
         for key in keys:
             if key == 'name':
                 self.name = details[key]
             elif key == 'link':
+                if details[key] == '':
+                    details[key] = None
                 self.link = details[key]
             elif key == 'current_ch':
                 self.current_ch = details[key]
@@ -60,7 +69,7 @@ class Manga:
                 self.recent_ch = details[key]
             elif key == 'interval':
                 self.interval = details[key]
-            elif key == 'upDate':
+            elif key == 'up_date':
                 self.up_date = details[key]
             elif key == 'ongoing':
                 if isinstance(details[key], bool):
@@ -76,7 +85,7 @@ class Manga:
         except AttributeError:
             raise TypeError("Passed parameter is not a dict")  # TypeError
 
-        if {*keys} <= Manga.fields:
+        if not ({*keys} <= Manga.fields):
             raise KeyError("Keys are not fieldnames.")  # KeyError
 
         # Type Check
@@ -91,17 +100,21 @@ class Manga:
                 continue
             elif key == 'interval' and datatype is int:
                 continue
-            elif key == 'upDate' and datatype is date:
+            elif key == 'up_date' and datatype is date:
                 continue
             elif key == 'ongoing' and datatype in [int, bool]:
                 continue
             raise TypeError(f"{key} must be of type {Manga.fieldtypes[key]}.")  # TypeError
 
+        # name check
+        if details['name'] == '':
+            raise ValueError("'name' detail must be either NoneType or str that is not empty.")
         # ongoing format check
         if details['ongoing'] is not None:
             if isinstance(details['ongoing'], int):
                 if details['ongoing'] not in (1, 0):
                     raise ValueError("'ongoing' detail must be boolean or integer (1 or 0 only).")
+        # link format check (using regex) (optional)
 
     def details(self):
         return {
@@ -110,7 +123,7 @@ class Manga:
             'current_ch': self.current_ch,
             'recent_ch': self.recent_ch,
             'interval': self.interval,
-            'upDate': self.up_date
+            'up_date': self.up_date
         }
 
 
@@ -118,13 +131,13 @@ class Manga:
 def new_manga(manga):
     is_manga_obj(manga)
 
-    connect = sqlite3.connect(Manga.db_file)
+    connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = connect.cursor()
 
-    cursor.execute("""
-        INSERT INTO Manga (name, link, current_ch, recent_ch, interval, upDate) 
-        VALUES (?, ?, ?, ?, ?, ?)
-        """, (manga.name, manga.link, manga.recent_ch, manga.current_ch, manga.interval, manga.up_date))
+    query = "INSERT INTO Manga (name, link, current_ch, recent_ch, interval, up_date, ongoing) VALUES (?, ?, ?, ?, ?, " \
+            "?, ?) "
+    params = (manga.name, manga.link, manga.recent_ch, manga.current_ch, manga.interval, manga.up_date, manga.ongoing)
+    cursor.execute(query, params)
 
     connect.commit()
     connect.close()
@@ -146,7 +159,7 @@ def update_manga(manga):
 
     upd_params = [(key, details[key], details['name']) for key in details.keys()]
 
-    connect = sqlite3.connect(Manga.db_file)
+    connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = connect.cursor()
 
     cursor.executemany("UPDATE Manga SET ? = ? WHERE name = ?", upd_params)
@@ -198,14 +211,14 @@ def if_manga_exists(name):
 
 # -------OLD IDEAS---------
 # db_file = "/database/mangadb.db"
-# fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'upDate'}
+# fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'up_date'}
 # fieldtypes = {
 #     'name': 'str or None',
 #     'link': 'str or None',
 #     'current_ch': 'float, int or None',
 #     'recent_ch': 'float, int or None',
 #     'interval': 'int or None',
-#     'upDate': 'str or None'
+#     'up_date': 'str or None'
 # }
 
 # def check_details(details):
@@ -215,7 +228,7 @@ def if_manga_exists(name):
 #     except AttributeError:
 #         return "Passed parameter is not a dict"  # TypeError
 #
-#     if {*keys} <= fields:
+#     if not ({*keys} <= fields):
 #         return "Keys are not fieldnames."  # KeyError
 #
 #     # Type Check
@@ -224,7 +237,7 @@ def if_manga_exists(name):
 #             continue
 #
 #         datatype = type(details[key])
-#         if key in ['name', 'link', 'upDate'] and datatype is str:
+#         if key in ['name', 'link', 'up_date'] and datatype is str:
 #             continue
 #         elif key in ['current_ch', 'recent_ch'] and datatype in [float, int]:
 #             continue
