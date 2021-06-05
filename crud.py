@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import date
 
 # might need: function that checks proper date format (YYYY-MM-DD?)
 # need: checker if name already exists
@@ -8,27 +8,38 @@ from datetime import datetime
 # new ideas
 class Manga:
     db_file = "/database/mangadb.db"
-    fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'upDate'}
+    fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'upDate', 'ongoing'}
     fieldtypes = {
         'name': 'str or None',
         'link': 'str or None',
-        'current_ch': 'float, int or None',
-        'recent_ch': 'float, int or None',
-        'interval': 'int or None',
-        'upDate': 'str or None'
+        'current_ch': 'float, int or NoneType',
+        'recent_ch': 'float, int or NoneType',
+        'interval': 'int or NoneType',
+        'upDate': 'datetime.date or NoneType',
+        'ongoing': 'integer (1 or 0) or boolean'
     }
 
     def __init__(self, name=None, link=None, current_ch=None, recent_ch=None, interval=None,
-                 up_date=None, details=None):
-        self.name = name
-        self.link = link
-        self.current_ch = current_ch
-        self.recent_ch = recent_ch
-        self.interval = interval
-        self.up_date = up_date
+                 up_date=None, ongoing=None, details=None):
+        self.name = None
+        self.link = None
+        self.current_ch = None
+        self.recent_ch = None
+        self.interval = None
+        self.up_date = None
+        self.ongoing = None
 
-        if details is not None:
-            self.update_details(details)
+        if details is None:
+            details = {
+                'name': name,
+                'link': link,
+                'current_ch': current_ch,
+                'recent_ch': recent_ch,
+                'interval': interval,
+                'upDate': up_date,
+                'ongoing': ongoing
+            }
+        self.update_details(details)
 
     def update_details(self, details):
         # check
@@ -40,17 +51,22 @@ class Manga:
         keys = details.keys()
         for key in keys:
             if key == 'name':
-                self.name = details['name']
+                self.name = details[key]
             elif key == 'link':
-                self.link = details['link']
+                self.link = details[key]
             elif key == 'current_ch':
-                self.current_ch = details['current_ch']
+                self.current_ch = details[key]
             elif key == 'recent_ch':
-                self.recent_ch = details['recent_ch']
+                self.recent_ch = details[key]
             elif key == 'interval':
-                self.interval = details['interval']
+                self.interval = details[key]
             elif key == 'upDate':
-                self.up_date = details['upDate']
+                self.up_date = details[key]
+            elif key == 'ongoing':
+                if isinstance(details[key], bool):
+                    self.ongoing = int(details[key])
+                else:
+                    self.ongoing = details[key]
 
     @staticmethod
     def check_details(details):
@@ -69,15 +85,23 @@ class Manga:
                 continue
 
             datatype = type(details[key])
-            if key in ['name', 'link', 'upDate'] and datatype is str:
+            if key in ['name', 'link'] and datatype is str:
                 continue
             elif key in ['current_ch', 'recent_ch'] and datatype in [float, int]:
                 continue
             elif key == 'interval' and datatype is int:
                 continue
+            elif key == 'upDate' and datatype is date:
+                continue
+            elif key == 'ongoing' and datatype in [int, bool]:
+                continue
             raise TypeError(f"{key} must be of type {Manga.fieldtypes[key]}.")  # TypeError
 
-        # Date Format Check Here
+        # ongoing format check
+        if details['ongoing'] is not None:
+            if isinstance(details['ongoing'], int):
+                if details['ongoing'] not in (1, 0):
+                    raise ValueError("'ongoing' detail must be boolean or integer (1 or 0 only).")
 
     def details(self):
         return {
