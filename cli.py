@@ -7,6 +7,10 @@ import datetime as dt
 fields = ('name', 'link', 'current_ch', 'recent_ch', 'interval', 'up_date', 'ongoing')
 
 
+def reset_sequence():  # temporary function
+    crud.reset_primary_ids()
+
+
 def create_details():
     details = {}
     for key in fields:
@@ -58,10 +62,10 @@ def main():
     parser = argparse.ArgumentParser(description="Test crud operations")
     parser.add_argument("--new", help="list new manga", action="store_const", const="new")
     parser.add_argument("--update", help="update existing manga", action="store_const", const="update")
-    parser.add_argument("--delete", help="delete existing manga", metavar="manga name")
+    parser.add_argument("--delete", help="delete existing manga", nargs='+', metavar="manga name")
+    parser.add_argument("--rename", help="rename existing manga", nargs='+', metavar="name / new_name")
     args = parser.parse_args()
 
-    new_manga()
     if args.new == "new":
         print("new")
         new_manga()
@@ -70,7 +74,22 @@ def main():
         update_manga()
     elif args.delete is not None:
         print("delete")
-        crud.del_manga(args.delete)
+        name = ''
+        for word in args.delete:
+            name += ' ' + word
+        crud.del_manga(name.lstrip())
+    elif args.rename is not None:
+        print("rename")
+        slashpos = args.rename.index('/')
+        name = ''
+        for word in args.rename[:slashpos]:
+            name += ' ' + word
+
+        new_name = ''
+        for word in args.rename[slashpos + 1:]:
+            new_name += ' ' + word
+
+        crud.rename_manga(name.lstrip(), new_name.lstrip())
 
 
 if __name__ == "__main__":

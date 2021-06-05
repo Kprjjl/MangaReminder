@@ -150,6 +150,8 @@ def get_manga(name):
 
 # Update
 def update_manga(manga):
+    if not if_manga_exists(manga.name):
+        raise Exception(f"Manga with name {manga.name} not found.")
     try:
         details = manga.details()
     except AttributeError:
@@ -157,12 +159,16 @@ def update_manga(manga):
     if manga.name is None:
         raise AttributeError("Manga object must have attribute 'name'.")
 
-    upd_params = [(key, details[key], details['name']) for key in details.keys()]
+    keys = details.keys()
+    query = ""
+    for key in keys:
+        query += f" {key} = :{key},"
+    query = "UPDATE Manga SET" + query[:-1] + f" WHERE name = '{manga.name}'"
 
     connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = connect.cursor()
 
-    cursor.executemany("UPDATE Manga SET ? = ? WHERE name = ?", upd_params)
+    cursor.execute(query, details)
 
     connect.commit()
     connect.close()
@@ -170,7 +176,7 @@ def update_manga(manga):
 
 def rename_manga(name, new_name):
     if not if_manga_exists(name):
-        return f"No manga with name {name} in storage."
+        raise Exception(f"No manga with name {name} in storage.")
 
     connect = sqlite3.connect(Manga.db_file)
     cursor = connect.cursor()
@@ -183,7 +189,7 @@ def rename_manga(name, new_name):
 # Delete
 def del_manga(name):
     if not if_manga_exists(name):
-        return f"No manga with name {name} in storage."
+        raise Exception(f"No manga with name {name} in storage.")
 
     connect = sqlite3.connect(Manga.db_file)
     cursor = connect.cursor()
@@ -209,6 +215,15 @@ def if_manga_exists(name):
 
     return False if len(manga) == 0 else True
 
+
+# Probably temporary
+def reset_primary_ids():
+    connect = sqlite3.connect(Manga.db_file)
+    cursor = connect.cursor()
+    cursor.execute("DELETE FROM sqlite_sequence WHERE name = 'Manga'")
+    connect.commit()
+    connect.close()
+    print("Manga sequence has been reset.")
 # -------OLD IDEAS---------
 # db_file = "/database/mangadb.db"
 # fields = {'name', 'link', 'current_ch', 'recent_ch', 'interval', 'up_date'}
