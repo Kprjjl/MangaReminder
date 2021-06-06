@@ -175,21 +175,20 @@ def list_manga(details):
 
 
 # Update
-def update_manga(manga):
-    if not if_manga_exists(manga.name):
-        raise Exception(f"Manga with name {manga.name} not found.")
-    try:
-        details = manga.details()
-    except AttributeError:
-        raise TypeError("Must pass a Manga object.")
-    if manga.name is None:
-        raise AttributeError("Manga object must have attribute 'name'.")
+def update_manga(details):
+    if 'name' not in details:
+        raise KeyError("dict object must have 'name' key.")
+    name = details['name']
+    if not if_manga_exists(name):
+        raise Exception(f"Manga with name {name} not found.")
+    if name is None:
+        raise ValueError("'name' key must have a str value")
 
     keys = details.keys()
     query = ""
     for key in keys:
         query += f" {key} = :{key},"
-    query = "UPDATE Manga SET" + query[:-1] + f" WHERE name = '{manga.name}'"
+    query = "UPDATE Manga SET" + query[:-1] + f" WHERE name = '{name}'"
 
     connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = connect.cursor()

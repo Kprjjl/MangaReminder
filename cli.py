@@ -71,8 +71,7 @@ def main():
     elif args.update == "update":
         print("update")
         details = create_details()
-        manga = Manga(details)
-        crud.update_manga(manga)
+        crud.update_manga(details)
     elif args.delete is not None:
         print("delete")
         name = ''
