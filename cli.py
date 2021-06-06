@@ -13,9 +13,12 @@ def reset_sequence():  # temporary function
 
 def create_details():
     details = {}
+    keys_to_pop = []
     for key in fields:
         value = input(f"{key}: ")
         if value == '':
+            keys_to_pop.append(key)
+        elif value in ['None', 'none', 'Null', 'null']:
             value = None
         elif key in ['current_ch', 'recent_ch']:
             try:
@@ -43,19 +46,10 @@ def create_details():
             value = dt.date(value.year, value.month, value.day)
 
         details[key] = value
+
+    for key in keys_to_pop:
+        details.pop(key)
     return details
-
-
-def new_manga():
-    details = create_details()
-    manga = Manga(details)
-    crud.new_manga(manga)
-
-
-def update_manga():
-    details = create_details()
-    manga = Manga(details)
-    crud.update_manga(manga)
 
 
 def main():
@@ -65,14 +59,20 @@ def main():
     parser.add_argument("--delete", help="delete existing manga", nargs='+', metavar="manga name")
     parser.add_argument("--rename", help="rename existing manga", nargs='+', metavar="name / new_name")
     parser.add_argument("--get", help="view existing manga details", nargs='+', metavar="manga name")
+    parser.add_argument("--list", help="creates list of manga depending on conditions", action="store_const",
+                        const="list")
     args = parser.parse_args()
 
     if args.new == "new":
         print("new")
-        new_manga()
+        details = create_details()
+        manga = Manga(details)
+        crud.new_manga(manga)
     elif args.update == "update":
         print("update")
-        update_manga()
+        details = create_details()
+        manga = Manga(details)
+        crud.update_manga(manga)
     elif args.delete is not None:
         print("delete")
         name = ''
@@ -104,6 +104,10 @@ def main():
               f"interval: {row['interval']}\n"
               f"up_date: {row['up_date']}\n"
               f"ongoing: {row['ongoing']}")
+    elif args.list == "list":
+        print("list")
+        details = create_details()
+        print(crud.list_manga(details))  # <- needs better visualization
 
 
 if __name__ == "__main__":

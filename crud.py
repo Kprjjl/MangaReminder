@@ -103,13 +103,15 @@ class Manga:
             raise TypeError(f"{key} must be of type {Manga.fieldtypes[key]}.")  # TypeError
 
         # name check
-        if details['name'] == '':
-            raise ValueError("'name' detail must be either NoneType or str that is not empty.")
+        if 'name' in details:
+            if details['name'] == '':
+                raise ValueError("'name' detail must be either NoneType or str that is not empty.")
         # ongoing format check
-        if details['ongoing'] is not None:
-            if isinstance(details['ongoing'], int):
-                if details['ongoing'] not in (1, 0):
-                    raise ValueError("'ongoing' detail must be boolean or integer (1 or 0 only).")
+        elif 'ongoing' in details:
+            if details['ongoing'] is not None:
+                if isinstance(details['ongoing'], int):
+                    if details['ongoing'] not in (1, 0):
+                        raise ValueError("'ongoing' detail must be boolean or integer (1 or 0 only).")
         # link format check (using regex) (optional)
 
     def details(self):
@@ -132,7 +134,7 @@ def new_manga(manga):
 
     query = "INSERT INTO Manga (name, link, current_ch, recent_ch, interval, up_date, ongoing) VALUES (?, ?, ?, ?, ?," \
             " ?, ?) "
-    params = (manga.name, manga.link, manga.recent_ch, manga.current_ch, manga.interval, manga.up_date, manga.ongoing)
+    params = (manga.name, manga.link, manga.current_ch, manga.recent_ch, manga.interval, manga.up_date, manga.ongoing)
     cursor.execute(query, params)
 
     connect.commit()
@@ -153,8 +155,23 @@ def get_manga(name):
     return dict(row)
 
 
-def list_manga():  # must use WHERE to group rows (might use **kwargs)
-    pass
+def list_manga(details):
+    Manga.check_details(details)
+
+    connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
+    cursor = connect.cursor()
+
+    query = "SELECT * FROM Manga WHERE"
+    params = []
+    for key in details:
+        query += f" {key} = ? AND"
+        params.append(details[key])
+    query = query[:-4]
+    params = tuple(params)
+
+    cursor.execute(query, params)
+    lst = cursor.fetchall()
+    return lst
 
 
 # Update
