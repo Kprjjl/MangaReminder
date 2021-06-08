@@ -142,6 +142,18 @@ def new_manga(manga):
 
 
 # Read
+def check_updates(row):
+    # check how many possible updates have passed and update recent_ch accordingly
+    if row['ongoing'] == 1:
+        today = datetime.date.today()
+        if not (today == row['up_date']):
+            days_passed = today - row['up_date']
+            num_of_updates = int(days_passed.days / row['interval'])
+            row['recent_ch'] += num_of_updates
+            row['recent_ch'] = float(int(row['recent_ch']))  # removes decimal place (in case recent_ch is eg. 10.5)
+    return row
+
+
 def get_manga(name):
     if not if_manga_exists(name):
         return f"Manga with name {name} not found."
@@ -150,15 +162,16 @@ def get_manga(name):
     connect.row_factory = sqlite3.Row
     cursor = connect.cursor()
     cursor.execute("SELECT * FROM Manga WHERE name = ?", (name,))
-    row = cursor.fetchone()
+    row = dict(cursor.fetchone())
 
-    return dict(row)
+    return check_updates(row)
 
 
 def list_manga(details):
     Manga.check_details(details)
 
     connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
+    connect.row_factory = sqlite3.Row
     cursor = connect.cursor()
 
     query = "SELECT * FROM Manga WHERE"
@@ -170,7 +183,11 @@ def list_manga(details):
     params = tuple(params)
 
     cursor.execute(query, params)
-    lst = cursor.fetchall()
+
+    lst = []
+    for row in cursor.fetchall():
+        lst.append(check_updates(dict(row)))
+
     return lst
 
 
