@@ -125,9 +125,11 @@ class Manga:
         }
 
 
+# -----------Main functions-----------
 # Create
 def new_manga(manga):
-    is_manga_obj(manga)
+    if not(is_manga_obj(manga)):
+        raise TypeError("Must pass a Manga object.")
 
     connect = sqlite3.connect(Manga.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = connect.cursor()
@@ -139,6 +141,7 @@ def new_manga(manga):
 
     connect.commit()
     connect.close()
+    print(f"Listed new manga: {manga.name}")
 
 
 # Read
@@ -214,6 +217,7 @@ def update_manga(details):
 
     connect.commit()
     connect.close()
+    print(f"Updated manga: {name}")
 
 
 def rename_manga(name, new_name):
@@ -225,7 +229,7 @@ def rename_manga(name, new_name):
     cursor.execute("UPDATE Manga SET name = ? WHERE name = ?", (new_name, name))
     connect.commit()
     connect.close()
-    return f"{name} renamed to {new_name}."
+    print(f"{name} renamed to {new_name}.")
 
 
 # Delete
@@ -238,13 +242,15 @@ def del_manga(name):
     cursor.execute("DELETE FROM Manga WHERE name = ?", (name,))
     connect.commit()
     connect.close()
-    return f"{name} deleted from storage."
+    print(f"{name} deleted from storage.")
+# ---------------------------------
 
 
 # Misc
 def is_manga_obj(manga):
     if not isinstance(manga, Manga):
-        raise TypeError("Must pass a Manga object.")
+        return False
+    return True
 
 
 def if_manga_exists(name):
